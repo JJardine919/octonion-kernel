@@ -3,6 +3,7 @@ import os
 from collections import Counter
 
 import numpy as np
+import pytest
 from octonion_kernel import Octonion, multiply
 
 
@@ -105,6 +106,7 @@ def test_basis_products_have_fano_plane_structure():
             assert len(nz) == 1, f"e{i}*e{j} is not a single basis element"
             k = int(nz[0])
             assert k >= 1, "product of imaginaries should be imaginary"
+            assert (E[i] * E[j]).approx_eq(-(E[j] * E[i])), f"e{i}*e{j} not anticommutative"
             lines.add(frozenset({i, j, k}))
     # exactly 7 Fano lines
     assert len(lines) == 7
@@ -146,10 +148,8 @@ def test_legacy_cross_check_if_available():
     try:
         legacy = importlib.import_module("aoi_collapse")
     except Exception:
-        import pytest
         pytest.skip("aoi_collapse not importable; legacy cross-check skipped")
     if not hasattr(legacy, "octonion_shadow_decompose"):
-        import pytest
         pytest.skip("legacy octonion_shadow_decompose not present")
     # If present, assert agreement on the product norm (basis-convention agnostic):
     rng = np.random.default_rng(99)
