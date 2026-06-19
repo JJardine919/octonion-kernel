@@ -17,9 +17,10 @@ class Octonion:
     coeffs: np.ndarray
 
     def __post_init__(self) -> None:
-        arr = np.asarray(self.coeffs, dtype=np.float64).reshape(-1)
+        arr = np.array(self.coeffs, dtype=np.float64).reshape(-1)
         if arr.shape != (8,):
             raise ValueError(f"Octonion needs 8 coefficients, got shape {arr.shape}")
+        arr.flags.writeable = False  # enforce immutability; views (e.g. .vec) inherit this
         object.__setattr__(self, "coeffs", arr)
 
     @property
@@ -39,7 +40,7 @@ class Octonion:
     def __neg__(self) -> "Octonion":
         return Octonion(-self.coeffs)
 
-    def __mul__(self, other):
+    def __mul__(self, other) -> "Octonion":
         if isinstance(other, Octonion):
             return multiply(self, other)
         return Octonion(self.coeffs * float(other))  # scalar on the right
@@ -56,7 +57,7 @@ class Octonion:
         return float(np.sqrt(self.coeffs @ self.coeffs))
 
     def approx_eq(self, other: "Octonion", tol: float = 1e-9) -> bool:
-        return bool(np.allclose(self.coeffs, other.coeffs, atol=tol))
+        return bool(np.allclose(self.coeffs, other.coeffs, atol=tol, rtol=0.0))
 
 
 def multiply(a: "Octonion", b: "Octonion") -> "Octonion":

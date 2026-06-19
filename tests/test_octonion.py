@@ -47,3 +47,31 @@ def test_approx_eq_tolerance():
     b = Octonion([1 + 1e-12, 0, 0, 0, 0, 0, 0, 0])
     assert a.approx_eq(b)
     assert not a.approx_eq(Octonion([1.1, 0, 0, 0, 0, 0, 0, 0]))
+
+
+def test_coeffs_and_vec_are_immutable():
+    o = Octonion([1, 2, 3, 4, 5, 6, 7, 8])
+    with pytest.raises(ValueError):
+        o.coeffs[0] = 99.0
+    with pytest.raises(ValueError):
+        o.vec[0] = 99.0
+
+
+def test_construction_copies_input_array():
+    src = np.array([1.0, 0, 0, 0, 0, 0, 0, 0])
+    o = Octonion(src)
+    src[0] = 42.0  # mutating the source must not change the octonion
+    assert o.real == 1.0
+
+
+def test_approx_eq_uses_absolute_tolerance_only():
+    # large coefficients must not widen the window via numpy's default rtol
+    a = Octonion([1e6, 0, 0, 0, 0, 0, 0, 0])
+    b = Octonion([1e6 + 1.0, 0, 0, 0, 0, 0, 0, 0])
+    assert not a.approx_eq(b)
+
+
+def test_octonion_mul_raises_until_task2():
+    a = Octonion([1, 0, 0, 0, 0, 0, 0, 0])
+    with pytest.raises(NotImplementedError):
+        _ = a * a
