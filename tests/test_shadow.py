@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 from octonion_kernel import Octonion, shadow_decompose, identity_residuals, ShadowResult
 
@@ -27,6 +28,7 @@ def test_commutator_is_purely_imaginary():
         assert abs(r.commutator.real) < 1e-10
 
 
+@pytest.mark.slow
 def test_identity_residuals_within_tolerance_over_10k_pairs():
     # Harness B: the three Jordan-Shadow identities hold over many random pairs.
     rng = np.random.default_rng(2)
@@ -40,3 +42,15 @@ def test_identity_residuals_within_tolerance_over_10k_pairs():
     assert max_loss <= 1e-10, f"losslessness max residual {max_loss}"
     assert max_orth <= 1e-8, f"orthogonality max residual {max_orth}"
     assert max_pyth <= 1e-8, f"pythagorean max residual {max_pyth}"
+
+
+def test_associator_norm_equals_product_of_component_norms():
+    # ||associator|| == ||jordan|| * ||commutator|| EXACTLY, because
+    # associator = jordan * commutator and the octonion norm is multiplicative.
+    # Consequence: the associator's norm carries no information beyond its two
+    # component norms — it cannot separate anything they cannot.
+    rng = np.random.default_rng(7)
+    for _ in range(1000):
+        a, b = _rand_oct(rng), _rand_oct(rng)
+        r = shadow_decompose(a, b)
+        assert abs(r.associator.norm() - r.jordan.norm() * r.commutator.norm()) < 1e-9

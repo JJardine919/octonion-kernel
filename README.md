@@ -5,9 +5,17 @@ and the Jordan-Shadow decomposition (DOI 18690444), with an A/B/C control harnes
 
 This is **Phase 1** of a larger build. It ships only the math it can prove, and an
 honest measurement (control C) of whether the Jordan-Shadow associator carries
-information beyond a trivial magnitude statistic. It makes no claim about what the
-decomposition *means* — only what it provably *is*. The 24D/96D embeddings, the
-multi-layer dynamics, persistent homology, and domain adapters are later phases.
+information beyond *trivial* statistics. Control C compares the associator not just
+against the magnitude `||product||` but against trivial non-octonion baselines —
+chiefly the plain dot product `|a·b|` — and the Jordan/commutator component norms;
+the associator counts as informative only if it beats the best of these (paired
+bootstrap CI of the separation difference excluding zero). **Phase-1 result: it does
+not.** Its apparent separation only tracks the `a·b` angle, which `|a·b|` captures as
+well or better — and `||associator||` is exactly `||jordan||·||commutator||`, so it
+adds nothing over its components. A NO here is a valid, expected outcome by design.
+The kernel makes no claim about what the decomposition *means* — only what it
+provably *is*. The 24D/96D embeddings, the multi-layer dynamics, persistent homology,
+and domain adapters are later phases.
 
 ## Why 8 dimensions?
 

@@ -2,7 +2,7 @@
 
 A: algebra correctness  (delegates to pytest tests/test_algebra.py)
 B: Jordan-Shadow identity residuals over random pairs
-C: the anti-castle control — does the associator beat the magnitude baseline?
+C: the anti-castle control — does the associator beat the best trivial baseline?
 """
 import numpy as np
 
@@ -28,20 +28,33 @@ def report_b(n=10_000, seed=2):
 
 def report_c(n=2000, seed=0):
     out = run_control_c(n=n, seed=seed)
+    groups = {
+        "prod_norm": "magnitude", "dot_abs": "trivial", "jordan_norm": "trivial",
+        "commutator_norm": "trivial", "assoc_norm": "associator",
+        "assoc_real": "associator", "assoc_maxabs": "associator",
+    }
     print(f"\n[C] Anti-castle control ({n} structured + {n} random pairs, all unit-normalized):")
-    print(f"    {'summary':<14} {'AUC':>7} {'sep':>7} {'95% CI':>20}")
-    for k in ("prod_norm", "assoc_norm", "assoc_real", "assoc_maxabs"):
+    print(f"    {'summary':<16} {'group':<11} {'AUC':>7} {'sep':>7} {'95% CI':>18}")
+    for k in ("prod_norm", "dot_abs", "jordan_norm", "commutator_norm",
+              "assoc_norm", "assoc_real", "assoc_maxabs"):
         r = out[k]
-        print(f"    {k:<14} {r['auc']:>7.3f} {r['sep']:>7.3f} "
+        print(f"    {k:<16} {groups[k]:<11} {r['auc']:>7.3f} {r['sep']:>7.3f} "
               f"[{r['ci_lo']:.3f}, {r['ci_hi']:.3f}]")
     v = out["verdict"]
     print(f"\n    magnitude baseline separation: {v['magnitude_sep']:.3f} "
-          f"(should be ~0.5 — magnitude was killed by normalization)")
-    print(f"    best associator summary: {v['best_summary']}")
-    verdict = ("YES — associator carries information beyond magnitude"
-               if v["associator_beats_magnitude"]
-               else "NO — associator adds nothing over magnitude at the kernel level")
-    print(f"    VERDICT: {verdict}")
+          f"(~0.5 => magnitude killed by unit-normalization)")
+    print(f"    best associator summary:      {v['best_associator_summary']} (sep {v['assoc_sep']:.3f})")
+    print(f"    best non-associator baseline: {v['best_baseline_summary']} (sep {v['best_baseline_sep']:.3f})")
+    print(f"    sep(associator) - sep(best baseline), 95% CI: "
+          f"[{v['sep_difference_ci'][0]:.3f}, {v['sep_difference_ci'][1]:.3f}]")
+    if v["associator_adds_information"]:
+        print("    VERDICT: YES - the associator separates the classes better than every")
+        print("             declared trivial baseline (including the plain dot product |a.b|).")
+    else:
+        print("    VERDICT: NO - the associator does NOT beat the best trivial baseline.")
+        print("             Its separation only reflects the a-b angle, which the plain dot")
+        print("             product |a.b| (and the Jordan/commutator norms) capture as well or")
+        print("             better. The associator carries no information beyond trivial statistics here.")
 
 
 if __name__ == "__main__":

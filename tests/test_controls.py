@@ -36,13 +36,16 @@ def test_pair_generators_are_unit_normalized():
 
 def test_control_c_runs_kills_magnitude_and_produces_verdict():
     out = run_control_c(n=1500, seed=0)
-    # a verdict is produced regardless of its value
-    assert "verdict" in out
-    assert isinstance(out["verdict"]["associator_beats_magnitude"], bool)
-    assert out["verdict"]["best_summary"] in ("assoc_norm", "assoc_real", "assoc_maxabs")
-    # SANITY: magnitude is killed by unit-normalization, so ||product|| can't separate.
-    # This guards the experiment's validity; it does NOT assert the associator wins.
+    v = out["verdict"]
+    # a verdict is produced regardless of its value (do NOT assert YES/NO)
+    assert isinstance(v["associator_adds_information"], bool)
+    assert v["best_associator_summary"] in ("assoc_norm", "assoc_real", "assoc_maxabs")
+    assert v["best_baseline_summary"] in ("prod_norm", "dot_abs", "jordan_norm", "commutator_norm")
+    # SANITY: unit-normalization kills the magnitude baseline (||product|| == 1 always)
     assert out["prod_norm"]["sep"] < 0.6
+    # a purely Euclidean, non-octonion statistic (|a.b|) is among the declared baselines
+    assert "dot_abs" in out
     # every reported summary has a well-formed CI
-    for key in ("prod_norm", "assoc_norm", "assoc_real", "assoc_maxabs"):
+    for key in ("prod_norm", "dot_abs", "jordan_norm", "commutator_norm",
+                "assoc_norm", "assoc_real", "assoc_maxabs"):
         assert 0.5 <= out[key]["ci_lo"] <= out[key]["ci_hi"] <= 1.0
