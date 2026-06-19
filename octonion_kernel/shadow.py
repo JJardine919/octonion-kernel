@@ -35,7 +35,7 @@ def shadow_decompose(a: Octonion, b: Octonion) -> ShadowResult:
                         associator=associator, product=ab)
 
 
-def identity_residuals(a: Octonion, b: Octonion) -> dict:
+def identity_residuals(a: Octonion, b: Octonion) -> dict[str, float]:
     r = shadow_decompose(a, b)
     losslessness = float(np.linalg.norm((r.jordan.coeffs + r.commutator.coeffs) - r.product.coeffs))
     orthogonality = float(abs(r.jordan.vec @ r.commutator.vec))
