@@ -72,3 +72,20 @@ def test_random_walk_step_scale_matched():
     # each emitted step term has norm ~ tgt (independent of x)
     norms = [step(x).norm() for _ in range(100)]
     assert abs(np.mean(norms) - tgt) / tgt < 1e-6
+
+
+from octonion_kernel.dynamics_controls import run_dynamics_control
+
+
+@pytest.mark.slow
+def test_dynamics_control_runs_and_is_agnostic():
+    out = run_dynamics_control(n=300, steps=16, seed=0)
+    v = out["verdict"]
+    # a verdict is produced regardless of its value (do NOT assert YES/NO)
+    assert isinstance(v["octonion_adds_structure"], bool)
+    assert v["best_baseline"] in ("raw", "linear", "generic_nonlinear", "random_walk")
+    for k in ("raw", "linear", "generic_nonlinear", "random_walk", "octonion"):
+        assert 0.0 <= out["aucs"][k] <= 1.0
+    # the difference CI is well-formed
+    lo, hi = v["auc_difference_ci"]
+    assert lo <= hi
