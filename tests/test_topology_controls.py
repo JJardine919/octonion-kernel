@@ -36,3 +36,20 @@ def test_bootstrap_mean_diff_ci_brackets_positive_difference():
     lo, hi = _bootstrap_mean_diff_ci(a, b, n_boot=500, seed=3)
     assert lo <= hi
     assert lo > 0.0  # clearly positive difference, CI excludes 0
+
+
+from octonion_kernel.topology_controls import run_topology_control
+
+
+@pytest.mark.slow
+def test_topology_control_runs_and_is_agnostic():
+    out = run_topology_control(n=30, steps=64, seed=0)
+    v = out["verdict"]
+    # a verdict is produced regardless of its value (do NOT assert YES/NO)
+    assert isinstance(v["octonion_adds_topology"], bool)
+    assert v["best_baseline"] in ("linear", "generic_nonlinear", "random_walk")
+    for k in ("linear", "generic_nonlinear", "random_walk", "octonion"):
+        assert np.isfinite(out["max_h1"][k]) and out["max_h1"][k] >= 0.0
+    assert np.isfinite(out["iid_cloud_max_h1"]) and out["iid_cloud_max_h1"] >= 0.0
+    lo, hi = v["diff_ci"]
+    assert lo <= hi
