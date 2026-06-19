@@ -54,3 +54,19 @@ of `|a·b|`). The octonion walk counts only if it beats the best baseline with a
 CI excluding zero.
 
 **Phase-2 result:** NO — the octonion walk does not beat the best baseline (octonion AUC 0.685 vs raw 0.880). The mean/location structured class now gives the raw input real separability power (raw AUC 0.880); the walk erodes rather than grows that separation. A NO is a valid, expected outcome by design.
+
+## Phase 3 — topology
+
+`octonion_kernel/topology.py` computes a persistent-homology summary (via `ripser`, Euclidean
+distance) of a walk's trajectory; the verdict metric is **max-H1 persistence** (the longest loop;
+`total_h1` is reported but not gated on, because it rewards noise loops). The control
+(`topology_controls.py`, `[E]` section of `harness_report.py`) asks whether the octonion walk's
+256-step trajectory carries more loop structure than matched **linear, generic-nonlinear, and
+random-walk (diffusion)** trajectories — the random-walk being the dynamical noise null. The
+octonion walk counts only if its mean max-H1 beats the best baseline with a paired-bootstrap CI
+excluding zero. An `iid_cloud` scatter is reported as a sanity null but does not gate.
+
+**Phase-3 result:** NO — the octonion walk does not produce more loop structure than the best
+matched baseline (octonion mean max-H1 0.4530 vs linear 1.5115). The linear trajectory generates
+the strongest persistent loops; the octonion walk is mid-range and statistically indistinguishable
+from diffusion. A NO is a valid, expected outcome by design.

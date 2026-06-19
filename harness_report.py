@@ -9,6 +9,7 @@ import numpy as np
 from octonion_kernel import Octonion, identity_residuals
 from octonion_kernel.controls import run_control_c
 from octonion_kernel.dynamics_controls import run_dynamics_control
+from octonion_kernel.topology_controls import run_topology_control
 
 
 def _rand_oct(rng):
@@ -80,6 +81,29 @@ def report_d(n=400, steps=32, seed=0):
         print("             random map; the octonion structure is not doing the work here.")
 
 
+def report_e(n=200, steps=256, seed=0):
+    out = run_topology_control(n=n, steps=steps, seed=seed)
+    print(f"\n[E] Topology control ({n} random initial states, {steps}-step walks, "
+          f"max-H1 persistence over the trajectory):")
+    print(f"    {'map':<18} {'mean max-H1':>12}")
+    for k in ("linear", "generic_nonlinear", "random_walk", "octonion"):
+        print(f"    {k:<18} {out['max_h1'][k]:>12.4f}")
+    print(f"    {'iid_cloud (null)':<18} {out['iid_cloud_max_h1']:>12.4f}")
+    v = out["verdict"]
+    print(f"\n    best baseline:  {v['best_baseline']} (mean max-H1 {v['best_baseline_max_h1']:.4f})")
+    print(f"    octonion mean max-H1: {v['octonion_max_h1']:.4f}")
+    print(f"    mean[maxH1(octonion) - maxH1(best baseline)], 95% CI: "
+          f"[{v['diff_ci'][0]:.4f}, {v['diff_ci'][1]:.4f}]")
+    if v["octonion_adds_topology"]:
+        print("    VERDICT: YES - the octonion walk's trajectory carries more persistent loop")
+        print("             structure than every matched baseline (linear / generic-nonlinear /")
+        print("             random-walk diffusion).")
+    else:
+        print("    VERDICT: NO - the octonion walk does NOT produce more loop structure than the")
+        print("             best matched baseline. Its trajectory topology is not distinctive")
+        print("             beyond a linear / generic-nonlinear / diffusion process.")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("Octonion kernel control report")
@@ -87,4 +111,5 @@ if __name__ == "__main__":
     report_b()
     report_c()
     report_d()
+    report_e()
     print("=" * 64)
