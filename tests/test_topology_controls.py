@@ -4,7 +4,7 @@ from octonion_kernel import Octonion
 from octonion_kernel.dynamics import DEFAULT_GENERATOR
 from octonion_kernel.dynamics_controls import octonion_step, make_random
 from octonion_kernel.topology_controls import (
-    run_map_trajectory, iid_cloud, _bootstrap_mean_diff_ci,
+    run_map_trajectory, iid_cloud, _bootstrap_mean_diff_ci, run_topology_control,
 )
 
 
@@ -36,9 +36,6 @@ def test_bootstrap_mean_diff_ci_brackets_positive_difference():
     lo, hi = _bootstrap_mean_diff_ci(a, b, n_boot=500, seed=3)
     assert lo <= hi
     assert lo > 0.0  # clearly positive difference, CI excludes 0
-
-
-from octonion_kernel.topology_controls import run_topology_control
 
 
 @pytest.mark.slow

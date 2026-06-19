@@ -85,10 +85,10 @@ def report_e(n=200, steps=256, seed=0):
     out = run_topology_control(n=n, steps=steps, seed=seed)
     print(f"\n[E] Topology control ({n} random initial states, {steps}-step walks, "
           f"max-H1 persistence over the trajectory):")
-    print(f"    {'map':<18} {'mean max-H1':>12}")
+    print(f"    {'map':<18} {'mean max-H1':>12} {'mean diameter':>14} {'mean max-H1/diam':>16}")
     for k in ("linear", "generic_nonlinear", "random_walk", "octonion"):
-        print(f"    {k:<18} {out['max_h1'][k]:>12.4f}")
-    print(f"    {'iid_cloud (null)':<18} {out['iid_cloud_max_h1']:>12.4f}")
+        print(f"    {k:<18} {out['max_h1'][k]:>12.4f} {out['diameter'][k]:>14.4f} {out['max_h1_norm'][k]:>16.4f}")
+    print(f"    {'iid_cloud (null)':<18} {out['iid_cloud_max_h1']:>12.4f} {'':>14} {'':>16}")
     v = out["verdict"]
     print(f"\n    best baseline:  {v['best_baseline']} (mean max-H1 {v['best_baseline_max_h1']:.4f})")
     print(f"    octonion mean max-H1: {v['octonion_max_h1']:.4f}")
@@ -102,6 +102,10 @@ def report_e(n=200, steps=256, seed=0):
         print("    VERDICT: NO - the octonion walk does NOT produce more loop structure than the")
         print("             best matched baseline. Its trajectory topology is not distinctive")
         print("             beyond a linear / generic-nonlinear / diffusion process.")
+    print(f"\n    [context] normalized (scale-invariant) max-H1 — octonion {v['octonion_max_h1_norm']:.4f} "
+          f"vs {v['best_baseline']} {v['best_baseline_max_h1_norm']:.4f}")
+    print( "    (raw max-H1 scales with trajectory diameter; the octonion walk contracts, so")
+    print( "     normalized max-H1 disambiguates 'topologically poor' from 'merely contractive'.)")
 
 
 if __name__ == "__main__":

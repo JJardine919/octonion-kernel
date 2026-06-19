@@ -66,7 +66,11 @@ random-walk (diffusion)** trajectories — the random-walk being the dynamical n
 octonion walk counts only if its mean max-H1 beats the best baseline with a paired-bootstrap CI
 excluding zero. An `iid_cloud` scatter is reported as a sanity null but does not gate.
 
-**Phase-3 result:** NO — the octonion walk does not produce more loop structure than the best
-matched baseline (octonion mean max-H1 0.4530 vs linear 1.5115). The linear trajectory generates
-the strongest persistent loops; the octonion walk is mid-range and statistically indistinguishable
-from diffusion. A NO is a valid, expected outcome by design.
+**Phase-3 result:** NO — the octonion walk's mean max-H1 (0.4530) is below the random-walk
+diffusion null (0.5338) and far below the linear baseline (1.5115); the paired-bootstrap CI
+[-1.145, -0.969] excludes zero. Note: raw max-H1 is an unnormalized absolute lifetime and scales
+with trajectory diameter — the octonion walk contracts toward an attractor (mean diameter 1.5355
+vs linear 2.0000, random-walk 1.9657), so part of the raw gap could reflect contraction rather
+than topological poverty. The scale-invariant normalized metric (max-H1/diameter) confirms the NO
+is unconfounded: octonion 0.2394 remains below the random-walk null (0.2715) and far below linear
+(0.7558). The NO is a valid, expected outcome by design.

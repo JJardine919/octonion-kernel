@@ -38,6 +38,17 @@ def test_persistence_summary_is_deterministic():
 
 def test_summary_keys_and_types():
     s = persistence_summary(_circle_traj(30))
-    assert set(s) == {"max_h1", "total_h1", "n_h1", "total_h0"}
-    assert all(isinstance(s[k], float) for k in ("max_h1", "total_h1", "total_h0"))
+    assert set(s) == {"max_h1", "total_h1", "n_h1", "total_h0", "diameter", "max_h1_norm"}
+    assert all(isinstance(s[k], float) for k in ("max_h1", "total_h1", "total_h0", "diameter", "max_h1_norm"))
     assert isinstance(s["n_h1"], int)
+
+
+def test_max_h1_norm_is_scale_invariant():
+    # scaling the whole cloud must not change normalized max-H1 (loops/diameter both scale)
+    base = _circle_traj(60)
+    scaled = [Octonion(3.7 * x.coeffs) for x in base]
+    sb = persistence_summary(base)
+    ss = persistence_summary(scaled)
+    assert sb["max_h1_norm"] > 0.3          # a real loop, normalized
+    assert abs(sb["max_h1_norm"] - ss["max_h1_norm"]) < 1e-6   # invariant to cloud scale
+    assert ss["max_h1"] > sb["max_h1"]      # raw max-H1 DID scale up (sanity)

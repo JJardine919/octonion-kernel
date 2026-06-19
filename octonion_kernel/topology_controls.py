@@ -63,19 +63,25 @@ def run_topology_control(n: int = 200, steps: int = 256, lam: float = 0.5, seed:
     }
 
     per_map_maxh1 = {k: [] for k in maps}
-    context = {k: {"total_h1": 0.0, "n_h1": 0.0, "total_h0": 0.0} for k in maps}
+    per_map_maxh1_norm = {k: [] for k in maps}
+    per_map_diameter = {k: [] for k in maps}
+    context = {k: {"total_h1": 0.0, "mean_n_h1": 0.0, "total_h0": 0.0} for k in maps}
     for k, step in maps.items():
         for x0 in x0s:
             s = persistence_summary(run_map_trajectory(x0, step, lam, steps))
             per_map_maxh1[k].append(s["max_h1"])
+            per_map_maxh1_norm[k].append(s["max_h1_norm"])
+            per_map_diameter[k].append(s["diameter"])
             context[k]["total_h1"] += s["total_h1"]
-            context[k]["n_h1"] += s["n_h1"]
+            context[k]["mean_n_h1"] += s["n_h1"]
             context[k]["total_h0"] += s["total_h0"]
     for k in maps:
         for key in context[k]:
             context[k][key] /= n
 
     mean_maxh1 = {k: float(np.mean(per_map_maxh1[k])) for k in maps}
+    mean_maxh1_norm = {k: float(np.mean(per_map_maxh1_norm[k])) for k in maps}
+    mean_diameter = {k: float(np.mean(per_map_diameter[k])) for k in maps}
 
     # iid_cloud sanity null (reported, not gating): clouds of one trajectory's size
     iid_rng = np.random.default_rng(seed + 50)
@@ -90,6 +96,8 @@ def run_topology_control(n: int = 200, steps: int = 256, lam: float = 0.5, seed:
 
     return {
         "max_h1": mean_maxh1,
+        "max_h1_norm": mean_maxh1_norm,
+        "diameter": mean_diameter,
         "context": context,
         "iid_cloud_max_h1": iid_cloud_max_h1,
         "verdict": {
@@ -98,5 +106,7 @@ def run_topology_control(n: int = 200, steps: int = 256, lam: float = 0.5, seed:
             "octonion_max_h1": mean_maxh1["octonion"],
             "best_baseline_max_h1": mean_maxh1[best_baseline],
             "diff_ci": [diff_lo, diff_hi],
+            "octonion_max_h1_norm": mean_maxh1_norm["octonion"],
+            "best_baseline_max_h1_norm": mean_maxh1_norm[best_baseline],
         },
     }

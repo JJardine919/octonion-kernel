@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import numpy as np
 from ripser import ripser
+from scipy.spatial.distance import pdist
 
 from .octonion import Octonion
 
@@ -40,4 +41,7 @@ def persistence_summary(traj: list[Octonion]) -> dict:
     life0 = h0[:, 1] - h0[:, 0]
     life0 = life0[np.isfinite(life0)]  # drop the one infinite H0 bar
     total_h0 = float(np.sum(life0))
-    return {"max_h1": max_h1, "total_h1": total_h1, "n_h1": n_h1, "total_h0": total_h0}
+    diameter = float(pdist(cloud).max()) if len(cloud) > 1 else 0.0
+    max_h1_norm = float(max_h1 / diameter) if diameter > 1e-12 else 0.0
+    return {"max_h1": max_h1, "total_h1": total_h1, "n_h1": n_h1, "total_h0": total_h0,
+            "diameter": diameter, "max_h1_norm": max_h1_norm}
