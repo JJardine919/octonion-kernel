@@ -60,6 +60,31 @@ class Octonion:
         return bool(np.allclose(self.coeffs, other.coeffs, atol=tol, rtol=0.0))
 
 
+def _cd_conj(x: np.ndarray) -> np.ndarray:
+    """Cayley-Dickson conjugate: negate the imaginary half, recurse into the real half."""
+    n = x.shape[0]
+    if n == 1:
+        return x.copy()
+    h = n // 2
+    return np.concatenate([_cd_conj(x[:h]), -x[h:]])
+
+
+def _cd_mul(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Recursive Cayley-Dickson product (Baez convention):
+    (a, b)(c, d) = (a*c - conj(d)*b, d*a + b*conj(c))
+    Works for lengths 1, 2, 4, 8 (reals -> complex -> quaternions -> octonions).
+    """
+    n = x.shape[0]
+    if n == 1:
+        return x * y
+    h = n // 2
+    a, b = x[:h], x[h:]
+    c, d = y[:h], y[h:]
+    re = _cd_mul(a, c) - _cd_mul(_cd_conj(d), b)
+    im = _cd_mul(d, a) + _cd_mul(b, _cd_conj(c))
+    return np.concatenate([re, im])
+
+
 def multiply(a: "Octonion", b: "Octonion") -> "Octonion":
-    """Placeholder — implemented in Task 2."""
-    raise NotImplementedError("multiply is implemented in Task 2")
+    """The octonion product (Cayley-Dickson, Baez convention)."""
+    return Octonion(_cd_mul(a.coeffs, b.coeffs))

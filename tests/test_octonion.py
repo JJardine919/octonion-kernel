@@ -69,9 +69,3 @@ def test_approx_eq_uses_absolute_tolerance_only():
     a = Octonion([1e6, 0, 0, 0, 0, 0, 0, 0])
     b = Octonion([1e6 + 1.0, 0, 0, 0, 0, 0, 0, 0])
     assert not a.approx_eq(b)
-
-
-def test_octonion_mul_raises_until_task2():
-    a = Octonion([1, 0, 0, 0, 0, 0, 0, 0])
-    with pytest.raises(NotImplementedError):
-        _ = a * a
