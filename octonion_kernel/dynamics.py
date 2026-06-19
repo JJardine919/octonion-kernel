@@ -26,6 +26,7 @@ def renorm(x: Octonion) -> Octonion:
     return Octonion(x.coeffs / x.norm())
 
 
+# Pure-imaginary unit generator (real part 0); chosen deliberately. Pinned, never tuned.
 # A fixed, declared generator octonion (unit norm). Pinned, never tuned to a result.
 DEFAULT_GENERATOR: Octonion = Octonion(
     np.array([0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]) / np.sqrt(7.0)

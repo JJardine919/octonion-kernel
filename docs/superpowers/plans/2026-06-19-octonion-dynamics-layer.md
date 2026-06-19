@@ -638,7 +638,7 @@ Expected: all pass plus the pre-existing legacy skip (so `<N> passed, 1 skipped`
 
 Also confirm the engine stays dependency-clean:
 
-Run: `python -c "s=open('octonion_kernel/dynamics.py').read(); bad=[w for w in ('scipy','sklearn','aoi_collapse') if w in s]; print('BAD', bad) if bad else print('clean')"`
+Run: `python -c "import ast; t=ast.parse(open('octonion_kernel/dynamics.py').read()); imps=[a.name for n in ast.walk(t) if isinstance(n,ast.Import) for a in n.names]+[n.module or '' for n in ast.walk(t) if isinstance(n,ast.ImportFrom)]; bad=[m for m in imps if any(w in m for w in ('scipy','sklearn','aoi'))]; print('BAD',bad) if bad else print('clean')"`
 Expected: `clean`
 
 - [ ] **Step 4: Add the README note**

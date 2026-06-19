@@ -98,10 +98,12 @@ layer can read state history) and, by convenience, the final state `x_T`. Determ
 
 ### 5.1 The two classes (declared, not searched)
 - **random:** `x₀` uniform on S⁷ (Gaussian 8-vector, normalized).
-- **structured:** `x₀` drawn within a **fixed declared k-dimensional subspace** of ℝ⁸
-  (default `k = 3`: Gaussian coefficients on the first 3 basis directions, zeros elsewhere, then
-  normalized — a "great subsphere"). The subspace is pinned in code and **not searched over**.
-  Stated limitation: any verdict is *with respect to this one declared structure*.
+- **structured:** `x0` clustered near a **fixed declared direction** on the sphere:
+  `normalize(c·μ + noise)` with `μ = ones(8)/√8` and concentration `c = 2.0` (both pinned
+  in code, not tuned to a verdict). This is a **mean/location** offset — a linear signal the
+  separability metric (§5.2) can detect — so the raw input is meaningfully separable and
+  "separability growth over raw" is a test with real power. (The earlier variance-only
+  "subspace" definition was invisible to the linear metric and is replaced.)
 
 Equal numbers of each class, each labelled (structured = 1, random = 0).
 

@@ -16,8 +16,11 @@ from sklearn.metrics import roc_auc_score
 from .octonion import Octonion
 from .dynamics import associator_step, renorm, DEFAULT_GENERATOR
 
-# declared structured-class subspace dimension (a "great subsphere")
-_STRUCTURED_DIM = 3
+# Declared structured-class parameters: structured states cluster near a fixed
+# direction on the sphere (a MEAN/location offset the linear metric can read),
+# vs make_random's zero-mean uniform states. Pinned, not tuned to a verdict.
+_STRUCTURE_DIR = np.ones(8) / np.sqrt(8.0)
+_STRUCTURE_CONCENTRATION = 2.0
 
 
 def make_random(rng) -> Octonion:
@@ -27,9 +30,9 @@ def make_random(rng) -> Octonion:
 
 
 def make_structured(rng) -> Octonion:
-    """Unit octonion supported only on the first _STRUCTURED_DIM basis axes."""
-    v = np.zeros(8)
-    v[:_STRUCTURED_DIM] = rng.standard_normal(_STRUCTURED_DIM)
+    """Unit octonion clustered near the fixed declared direction _STRUCTURE_DIR
+    (a linearly-detectable mean offset), vs make_random's zero-mean uniform."""
+    v = _STRUCTURE_CONCENTRATION * _STRUCTURE_DIR + rng.standard_normal(8)
     return Octonion(v / np.linalg.norm(v))
 
 
@@ -151,11 +154,14 @@ def _bootstrap_auc_diff_ci(scores_a, scores_b, y, n_boot: int = 2000, seed: int 
         if ys.min() == ys.max():
             continue  # degenerate resample (single class) — skip
         diffs.append(roc_auc_score(ys, scores_a[idx]) - roc_auc_score(ys, scores_b[idx]))
+    if not diffs:
+        return 0.0, 0.0
     lo, hi = np.percentile(diffs, [2.5, 97.5])
     return float(lo), float(hi)
 
 
 def run_dynamics_control(n: int = 400, lam: float = 0.5, steps: int = 32, seed: int = 0) -> dict:
+    """Run the dynamics separability control; return per-map AUCs and the verdict."""
     rng = np.random.default_rng(seed)
     g = DEFAULT_GENERATOR
 

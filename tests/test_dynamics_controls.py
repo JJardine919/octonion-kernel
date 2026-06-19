@@ -3,20 +3,27 @@ import pytest
 from octonion_kernel import Octonion
 from octonion_kernel.dynamics import DEFAULT_GENERATOR
 from octonion_kernel.dynamics_controls import (
-    make_random, make_structured, _STRUCTURED_DIM, _mean_assoc_norm,
+    make_random, make_structured, _STRUCTURE_DIR, _mean_assoc_norm,
     make_linear_map, make_generic_nonlinear_map, make_random_walk_step,
-    octonion_step, run_map,
+    octonion_step, run_map, run_dynamics_control,
 )
 
 
-def test_generators_unit_norm_and_subspace():
+def test_generators_unit_norm_and_structured_has_directional_mean():
     rng = np.random.default_rng(0)
-    for _ in range(50):
+    mu = _STRUCTURE_DIR
+    structured_proj, random_proj = [], []
+    for _ in range(300):
         r = make_random(rng)
         s = make_structured(rng)
         assert abs(r.norm() - 1.0) < 1e-12
         assert abs(s.norm() - 1.0) < 1e-12
-        assert np.allclose(s.coeffs[_STRUCTURED_DIM:], 0.0)
+        structured_proj.append(float(s.coeffs @ mu))
+        random_proj.append(float(r.coeffs @ mu))
+    # structured states carry a positive mean projection onto the declared
+    # direction (a linear signal); random states are ~zero-mean along it.
+    assert np.mean(structured_proj) > 0.2
+    assert abs(np.mean(random_proj)) < 0.1
 
 
 def test_linear_map_is_linear_and_scale_matched():
@@ -72,9 +79,6 @@ def test_random_walk_step_scale_matched():
     # each emitted step term has norm ~ tgt (independent of x)
     norms = [step(x).norm() for _ in range(100)]
     assert abs(np.mean(norms) - tgt) / tgt < 1e-6
-
-
-from octonion_kernel.dynamics_controls import run_dynamics_control
 
 
 @pytest.mark.slow

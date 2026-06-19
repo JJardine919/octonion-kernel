@@ -41,7 +41,7 @@ def test_walk_length_is_steps_plus_one():
     rng = np.random.default_rng(3)
     traj = octonion_walk(_rand_oct(rng), steps=32)
     # x0 plus 32 steps, unless an underflow halt occurred (this seed does not halt)
-    assert len(traj) == 33
+    assert len(traj) == 33, f"expected 33 states (x0 + 32 steps); got {len(traj)} — did the walk underflow-halt?"
 
 
 def test_associator_step_is_degree_2_homogeneous():

@@ -53,4 +53,4 @@ random-walk** baselines — the generic-nonlinear map being the decisive bar (th
 of `|a·b|`). The octonion walk counts only if it beats the best baseline with a paired-bootstrap
 CI excluding zero.
 
-**Phase-2 result:** NO — the octonion walk does not beat the best baseline (octonion AUC 0.549 vs generic_nonlinear 0.621). A NO is a valid, expected outcome by design.
+**Phase-2 result:** NO — the octonion walk does not beat the best baseline (octonion AUC 0.685 vs raw 0.880). The mean/location structured class now gives the raw input real separability power (raw AUC 0.880); the walk erodes rather than grows that separation. A NO is a valid, expected outcome by design.
