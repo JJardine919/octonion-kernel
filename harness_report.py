@@ -8,6 +8,7 @@ import numpy as np
 
 from octonion_kernel import Octonion, identity_residuals
 from octonion_kernel.controls import run_control_c
+from octonion_kernel.dynamics_controls import run_dynamics_control
 
 
 def _rand_oct(rng):
@@ -57,10 +58,33 @@ def report_c(n=2000, seed=0):
         print("             better. The associator carries no information beyond trivial statistics here.")
 
 
+def report_d(n=400, steps=32, seed=0):
+    out = run_dynamics_control(n=n, steps=steps, seed=seed)
+    print(f"\n[D] Dynamics control ({n} structured + {n} random initial states, "
+          f"{steps}-step unit-sphere walks):")
+    print(f"    {'map':<18} {'test AUC':>9}")
+    for k in ("raw", "linear", "generic_nonlinear", "random_walk", "octonion"):
+        print(f"    {k:<18} {out['aucs'][k]:>9.3f}")
+    v = out["verdict"]
+    print(f"\n    best baseline:  {v['best_baseline']} (AUC {v['best_baseline_auc']:.3f})")
+    print(f"    octonion AUC:   {v['octonion_auc']:.3f}")
+    print(f"    AUC(octonion) - AUC(best baseline), 95% CI: "
+          f"[{v['auc_difference_ci'][0]:.3f}, {v['auc_difference_ci'][1]:.3f}]")
+    if v["octonion_adds_structure"]:
+        print("    VERDICT: YES - iterating the octonion walk separates the classes better")
+        print("             than the raw input AND every declared baseline (incl. a matched")
+        print("             generic quadratic map).")
+    else:
+        print("    VERDICT: NO - the octonion walk does NOT beat the best baseline. Iteration")
+        print("             adds no separability beyond a matched linear / generic-nonlinear /")
+        print("             random map; the octonion structure is not doing the work here.")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("Octonion kernel control report")
     print("[A] algebra correctness: run `python -m pytest tests/test_algebra.py`")
     report_b()
     report_c()
+    report_d()
     print("=" * 64)

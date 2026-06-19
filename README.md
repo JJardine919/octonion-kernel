@@ -41,3 +41,16 @@ python harness_report.py     # printed B/C report
 ```
 
 Runtime dependencies: numpy (kernel), scipy (harness ranking only). No network, no AOI-engine imports.
+
+## Phase 2 — dynamics
+
+`octonion_kernel/dynamics.py` iterates the kernel into an autonomous, unit-sphere walk
+`x_{t+1} = renorm(λ·x_t + (1−λ)·associator(x_t, g))` (genuinely nonlinear: the associator is
+quadratic in `x`). Its control (`dynamics_controls.py`, run via the `[D]` section of
+`harness_report.py`) asks whether iterating the walk makes structured-vs-random initial states
+more linearly separable than the raw input and than matched **linear, generic-nonlinear, and
+random-walk** baselines — the generic-nonlinear map being the decisive bar (the dynamics analog
+of `|a·b|`). The octonion walk counts only if it beats the best baseline with a paired-bootstrap
+CI excluding zero.
+
+**Phase-2 result:** NO — the octonion walk does not beat the best baseline (octonion AUC 0.549 vs generic_nonlinear 0.621). A NO is a valid, expected outcome by design.
