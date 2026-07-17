@@ -72,3 +72,29 @@ def propose_shadow(state: np.ndarray, J: np.ndarray, rng: np.random.Generator) -
             best_score = scores[local_best]
             best_idx = start + local_best
     return best_idx
+
+
+def anneal(J: np.ndarray, initial_state: np.ndarray, propose_fn, steps: int = 5000,
+           t0: float = 2.0, t_min: float = 0.05, seed: int = 0) -> dict:
+    """Single-spin-flip simulated annealing. `propose_fn(state, J, rng) -> int` is the
+    only thing that varies between arms; acceptance rule and cooling schedule are shared
+    across every arm so the proposal rule is the sole controlled variable."""
+    rng = np.random.default_rng(seed)
+    state = initial_state.astype(float).copy()
+    current_energy = energy(state, J)
+    best_energy = current_energy
+    if steps <= 1:
+        temps = np.full(max(steps, 1), t0)
+    else:
+        temps = t0 * (t_min / t0) ** (np.arange(steps) / (steps - 1))
+    for t in range(steps):
+        T = temps[t]
+        i = propose_fn(state, J, rng)
+        h_i = float(J[i] @ state)
+        dE = 2.0 * state[i] * h_i
+        if dE <= 0.0 or rng.random() < np.exp(-dE / T):
+            state[i] = -state[i]
+            current_energy += dE
+            if current_energy < best_energy:
+                best_energy = current_energy
+    return {"best_energy": float(best_energy), "final_state": state}

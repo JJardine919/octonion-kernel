@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from octonion_kernel.optimize import (
-    make_sk_instance, energy, local_fields,
+    make_sk_instance, energy, local_fields, anneal,
     propose_random, propose_greedy, propose_generic_nonlinear, propose_shadow,
 )
 
@@ -100,3 +100,26 @@ def test_propose_shadow_selects_within_dominant_chunk():
     state = rng.choice([-1.0, 1.0], size=n)
     i = propose_shadow(state, J, rng)
     assert 8 <= i < 16
+
+
+def test_anneal_deterministic():
+    J = make_sk_instance(n=64, seed=7)
+    initial = np.random.default_rng(8).choice([-1.0, 1.0], size=64)
+    r1 = anneal(J, initial, propose_greedy, steps=200, seed=9)
+    r2 = anneal(J, initial, propose_greedy, steps=200, seed=9)
+    assert r1["best_energy"] == r2["best_energy"]
+    assert np.array_equal(r1["final_state"], r2["final_state"])
+
+
+def test_anneal_best_energy_never_worse_than_initial():
+    J = make_sk_instance(n=64, seed=10)
+    initial = np.random.default_rng(11).choice([-1.0, 1.0], size=64)
+    result = anneal(J, initial, propose_random, steps=300, seed=12)
+    assert result["best_energy"] <= energy(initial, J) + 1e-9
+
+
+def test_anneal_final_state_is_valid_spin_config():
+    J = make_sk_instance(n=32, seed=13)
+    initial = np.random.default_rng(14).choice([-1.0, 1.0], size=32)
+    result = anneal(J, initial, propose_greedy, steps=150, seed=15)
+    assert np.all(np.isin(result["final_state"], [-1.0, 1.0]))
