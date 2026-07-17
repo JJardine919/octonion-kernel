@@ -16,6 +16,7 @@ from .compress import (
     DEFAULT_GENERATOR, DEFAULT_ROTATION, octonion_encode, octonion_decode,
     rotation_encode, rotation_decode, raw_truncate_encode,
 )
+from .topology import persistence_summary_from_cloud
 
 
 def load_and_split_digits(seed: int = 0, test_frac: float = 0.2) -> tuple[np.ndarray, np.ndarray]:
@@ -58,6 +59,22 @@ def bootstrap_mean_diff_ci(diffs: np.ndarray, n_boot: int = 2000, seed: int = 0)
     return float(lo), float(hi)
 
 
+def _information_density(codes: np.ndarray, mse: float, variance: float,
+                          sample_size: int = 200, seed: int = 0) -> dict:
+    rng = np.random.default_rng(seed)
+    n = codes.shape[0]
+    size = min(sample_size, n)
+    idx = rng.choice(n, size=size, replace=False)
+    topo = persistence_summary_from_cloud(codes[idx])
+    fidelity = 1.0 - (mse / variance)
+    density = fidelity / (1.0 + topo["max_h1"])
+    return {
+        "reconstruction_fidelity": float(fidelity),
+        "max_h1": topo["max_h1"],
+        "information_density": float(density),
+    }
+
+
 def run_compress_control(k: int = 3, seed: int = 0) -> dict:
     train_chunks, test_chunks = load_and_split_digits(seed=seed)
 
@@ -94,10 +111,22 @@ def run_compress_control(k: int = 3, seed: int = 0) -> dict:
         verdict["random_rotation"]["octonion_wins"] and verdict["raw_truncation"]["octonion_wins"]
     )
 
+    variance = float(np.var(test_chunks))
+    information_density = {
+        method: _information_density(codes_array, mean_mse[method], variance, seed=seed + 2)
+        for method, codes_array in {
+            "octonion": octo_encoded,
+            "random_rotation": rot_encoded,
+            "raw_truncation": raw_encoded,
+            "pca": pca_codes,
+        }.items()
+    }
+
     return {
         "mean_mse": mean_mse,
         "verdict_by_baseline": verdict,
         "octonion_beats_fixed_baselines": octonion_beats_fixed_baselines,
+        "information_density": information_density,
         "test_chunks": test_chunks,
         "codes": {
             "octonion": octo_encoded,

@@ -55,3 +55,14 @@ def test_run_compress_control_deterministic():
     r1 = run_compress_control(k=3, seed=7)
     r2 = run_compress_control(k=3, seed=7)
     assert r1["mean_mse"] == r2["mean_mse"]
+
+
+def test_run_compress_control_information_density_is_well_formed():
+    result = run_compress_control(k=3, seed=0)
+    density = result["information_density"]
+    assert set(density.keys()) == {"octonion", "random_rotation", "raw_truncation", "pca"}
+    for method_stats in density.values():
+        assert np.isfinite(method_stats["reconstruction_fidelity"])
+        assert np.isfinite(method_stats["max_h1"])
+        assert method_stats["max_h1"] >= 0.0
+        assert np.isfinite(method_stats["information_density"])
