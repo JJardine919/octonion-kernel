@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 from octonion_kernel import Octonion, shadow_decompose, identity_residuals, ShadowResult
+from octonion_kernel.shadow import shadow_decompose_batch
 
 
 def _rand_oct(rng):
@@ -42,6 +43,27 @@ def test_identity_residuals_within_tolerance_over_10k_pairs():
     assert max_loss <= 1e-10, f"losslessness max residual {max_loss}"
     assert max_orth <= 1e-8, f"orthogonality max residual {max_orth}"
     assert max_pyth <= 1e-8, f"pythagorean max residual {max_pyth}"
+
+
+def test_shadow_decompose_batch_matches_per_row_scalar_reference():
+    # shadow_decompose_batch exists to avoid per-chunk Octonion construction in
+    # optimize.py's hot path (propose_shadow), but nothing pinned its output
+    # against the known-correct scalar shadow_decompose -- a regression here
+    # (e.g. _cd_mul reverting to first-axis slicing for a (n_chunks, 8) batch)
+    # would be invisible to the rest of the suite.
+    rng = np.random.default_rng(11)
+    n_chunks = 5
+    a_batch = rng.standard_normal((n_chunks, 8))
+    b_batch = rng.standard_normal((n_chunks, 8))
+
+    jordan, commutator, associator, product = shadow_decompose_batch(a_batch, b_batch)
+
+    for i in range(n_chunks):
+        expected = shadow_decompose(Octonion(a_batch[i]), Octonion(b_batch[i]))
+        assert np.allclose(jordan[i], expected.jordan.coeffs, atol=1e-12)
+        assert np.allclose(commutator[i], expected.commutator.coeffs, atol=1e-12)
+        assert np.allclose(associator[i], expected.associator.coeffs, atol=1e-12)
+        assert np.allclose(product[i], expected.product.coeffs, atol=1e-12)
 
 
 def test_associator_norm_equals_product_of_component_norms():
