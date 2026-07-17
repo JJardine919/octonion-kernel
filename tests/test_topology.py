@@ -1,6 +1,6 @@
 import numpy as np
 from octonion_kernel import Octonion
-from octonion_kernel.topology import trajectory_cloud, persistence_summary
+from octonion_kernel.topology import trajectory_cloud, persistence_summary, persistence_summary_from_cloud
 
 
 def _circle_traj(n=60):
@@ -52,3 +52,16 @@ def test_max_h1_norm_is_scale_invariant():
     assert sb["max_h1_norm"] > 0.3          # a real loop, normalized
     assert abs(sb["max_h1_norm"] - ss["max_h1_norm"]) < 1e-6   # invariant to cloud scale
     assert ss["max_h1"] > sb["max_h1"]      # raw max-H1 DID scale up (sanity)
+
+
+def test_persistence_summary_from_cloud_matches_octonion_wrapper():
+    traj = _circle_traj(40)
+    cloud = trajectory_cloud(traj)
+    assert persistence_summary_from_cloud(cloud) == persistence_summary(traj)
+
+
+def test_persistence_summary_from_cloud_works_on_lower_dimensional_clouds():
+    rng = np.random.default_rng(0)
+    cloud_3d = rng.standard_normal((30, 3))
+    s = persistence_summary_from_cloud(cloud_3d)
+    assert set(s) == {"max_h1", "total_h1", "n_h1", "total_h0", "diameter", "max_h1_norm"}
