@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from octonion_kernel.compress_controls import (
     load_and_split_digits, fit_pca, pca_encode, pca_decode, run_compress_control,
@@ -66,3 +67,15 @@ def test_run_compress_control_information_density_is_well_formed():
         assert np.isfinite(method_stats["max_h1"])
         assert method_stats["max_h1"] >= 0.0
         assert np.isfinite(method_stats["information_density"])
+
+
+def test_information_density_matches_declared_formulas():
+    # Guards against a swapped numerator/denominator or an inverted fidelity --
+    # both would pass the well-formedness check above but report the wrong number.
+    result = run_compress_control(k=3, seed=0)
+    variance = float(np.var(result["test_chunks"]))
+    for method, stats in result["information_density"].items():
+        expected_fidelity = 1.0 - (result["mean_mse"][method] / variance)
+        assert stats["reconstruction_fidelity"] == pytest.approx(expected_fidelity)
+        expected_density = expected_fidelity / (1.0 + stats["max_h1"])
+        assert stats["information_density"] == pytest.approx(expected_density)

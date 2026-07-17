@@ -61,6 +61,10 @@ def bootstrap_mean_diff_ci(diffs: np.ndarray, n_boot: int = 2000, seed: int = 0)
 
 def _information_density(codes: np.ndarray, mse: float, variance: float,
                           sample_size: int = 200, seed: int = 0) -> dict:
+    """reconstruction_fidelity = 1 - (mse / variance): 1.0 = perfect, 0.0 = no better
+    than predicting the mean. information_density = fidelity / (1 + max_h1): does the
+    same fidelity come from a topologically simpler (lower-persistence) code? max_h1
+    is computed on a seeded subsample of `codes` via persistence_summary_from_cloud."""
     rng = np.random.default_rng(seed)
     n = codes.shape[0]
     size = min(sample_size, n)

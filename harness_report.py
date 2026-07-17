@@ -185,9 +185,12 @@ if __name__ == "__main__":
     report_d()
     report_e()
     # NOTE: run_optimize_control's spec-declared defaults (n_instances=500, steps=5000)
-    # take ~5.5 hours at current performance -- reduced here so the report finishes in
-    # a few minutes; call report_f(n_instances=500, steps=5000) directly for the
-    # full-power run.
+    # take ~5.5 hours at current performance (measured: 10 instances went from 708s to
+    # 394s after vectorizing propose_shadow's per-chunk Octonion construction -- a real
+    # ~1.8x, not the ~10x hoped for, since local_fields' O(n^2) cost and the Metropolis
+    # accept/reject logic are shared by all four arms and don't shrink from this change).
+    # Reduced here so the report finishes in a few minutes; call
+    # report_f(n_instances=500, steps=5000) directly for the full-power run.
     report_f(n_instances=20, steps=500)
     report_g()
     print("=" * 64)
