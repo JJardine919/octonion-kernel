@@ -6,8 +6,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .octonion import Octonion
-from .shadow import shadow_decompose
+from .shadow import shadow_decompose_batch
 
 CHUNK_SIZE = 8
 
@@ -74,24 +73,19 @@ def propose_generic_nonlinear(state: np.ndarray, J: np.ndarray, rng: np.random.G
     return _sample_by_score(_flip_improvement_scores(state, h), rng)
 
 
-def _shadow_chunk_scores(a_chunk: np.ndarray, b_chunk: np.ndarray) -> np.ndarray:
-    """|associator_i| for one 8-spin chunk given its spins (a) and local fields (b)."""
-    result = shadow_decompose(Octonion(a_chunk), Octonion(b_chunk))
-    return np.abs(result.associator.coeffs)
-
-
 def propose_shadow(state: np.ndarray, J: np.ndarray, rng: np.random.Generator) -> int:
     """Per chunk, score_i = |associator_i| from shadow_decompose(chunk spins, chunk
     fields); sample proportional to score across all n spins. Fixed, pre-declared
-    rule -- no open search."""
+    rule -- no open search. Vectorized: all chunks processed in one batched call via
+    shadow_decompose_batch, no per-chunk Octonion construction or Python-level loop
+    (that construction dominated Phase 4's original ~10hr full-scale runtime)."""
     n = len(state)
     h = local_fields(state, J)
     n_chunks = n // CHUNK_SIZE
-    scores = np.empty(n)
-    for c in range(n_chunks):
-        start = c * CHUNK_SIZE
-        end = start + CHUNK_SIZE
-        scores[start:end] = _shadow_chunk_scores(state[start:end], h[start:end])
+    a_batch = state.reshape(n_chunks, CHUNK_SIZE)
+    b_batch = h.reshape(n_chunks, CHUNK_SIZE)
+    _, _, associator, _ = shadow_decompose_batch(a_batch, b_batch)
+    scores = np.abs(associator).reshape(n)
     return _sample_by_score(scores, rng)
 
 

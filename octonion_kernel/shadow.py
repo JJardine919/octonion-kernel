@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .octonion import Octonion, multiply
+from .octonion import Octonion, multiply, _cd_mul
 
 
 @dataclass(frozen=True)
@@ -33,6 +33,20 @@ def shadow_decompose(a: Octonion, b: Octonion) -> ShadowResult:
     associator = multiply(jordan, commutator)
     return ShadowResult(jordan=jordan, commutator=commutator,
                         associator=associator, product=ab)
+
+
+def shadow_decompose_batch(a: np.ndarray, b: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Batched Jordan-Shadow decomposition: same math as shadow_decompose, but on
+    raw arrays of shape (..., 8) -- e.g. (n_chunks, 8) -- with no Octonion object
+    construction anywhere in the hot path. Vectorized across every leading batch
+    dimension in one call via _cd_mul's last-axis recursion. Returns
+    (jordan, commutator, associator, product), each shape (..., 8)."""
+    ab = _cd_mul(a, b)
+    ba = _cd_mul(b, a)
+    jordan = (ab + ba) / 2.0
+    commutator = (ab - ba) / 2.0
+    associator = _cd_mul(jordan, commutator)
+    return jordan, commutator, associator, ab
 
 
 def identity_residuals(a: Octonion, b: Octonion) -> dict[str, float]:
