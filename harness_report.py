@@ -1,4 +1,4 @@
-"""Runnable A/B/C/D/E/F control report. Run from the repo root: python harness_report.py
+"""Runnable A/B/C/D/E/F/G control report. Run from the repo root: python harness_report.py
 
 A: algebra correctness  (delegates to pytest tests/test_algebra.py)
 B: Jordan-Shadow identity residuals over random pairs
@@ -7,6 +7,8 @@ D: dynamics control — does iterating the octonion walk add linear separability
 E: topology control — does the walk's trajectory carry more loop structure?
 F: optimizer control — does shadow-guided move-proposal reach lower SK-model energy
    than random/greedy/generic-nonlinear baselines in simulated annealing?
+G: compression control — does octonion-multiply transform coding reconstruct real
+   digit-image data better than a fixed random-rotation baseline and raw truncation?
 """
 import numpy as np
 
@@ -15,6 +17,7 @@ from octonion_kernel.controls import run_control_c
 from octonion_kernel.dynamics_controls import run_dynamics_control
 from octonion_kernel.topology_controls import run_topology_control
 from octonion_kernel.optimize_controls import run_optimize_control
+from octonion_kernel.compress_controls import run_compress_control
 
 
 def _rand_oct(rng):
@@ -146,6 +149,33 @@ def report_f(n_instances=500, n=64, steps=5000, seed=0):
         print("             work here.")
 
 
+def report_g(k=3, seed=0):
+    out = run_compress_control(k=k, seed=seed)
+    print(f"\n[G] Compression control (k={k}, real digit-image chunks, held-out test set):")
+    print(f"    {'method':<16} {'mean MSE':>10}")
+    for method in ("octonion", "random_rotation", "raw_truncation", "pca"):
+        print(f"    {method:<16} {out['mean_mse'][method]:>10.4f}")
+    print("\n    verdict vs. each fixed baseline (octonion must beat both):")
+    for baseline, v in out["verdict_by_baseline"].items():
+        status = "OCTONION WINS" if v["octonion_wins"] else "NO"
+        print(f"    vs {baseline:<16} advantage {v['mean_advantage']:>9.4f}  "
+              f"95% CI [{v['ci_lo']:.4f}, {v['ci_hi']:.4f}]  {status}")
+    print("\n    information density (reconstruction_fidelity / (1 + max_h1)):")
+    for method, d in out["information_density"].items():
+        print(f"    {method:<16} fidelity {d['reconstruction_fidelity']:>7.4f}  "
+              f"max_h1 {d['max_h1']:>7.4f}  density {d['information_density']:>7.4f}")
+    if out["octonion_beats_fixed_baselines"]:
+        print("\n    VERDICT: YES - octonion transform coding reconstructs real digit-image data")
+        print("             more accurately than both fixed baselines (random rotation and raw")
+        print("             truncation) at this compression budget.")
+    else:
+        print("\n    VERDICT: NO - octonion transform coding does NOT beat both fixed baselines.")
+        print("             Octonion multiplication as a change of basis is not concentrating")
+        print("             reconstructable signal better than a fixed non-octonion transform")
+        print("             here. (PCA's MSE is reported above for context only -- it is the")
+        print("             optimal linear transform for this criterion by construction.)")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("Octonion kernel control report")
@@ -155,9 +185,9 @@ if __name__ == "__main__":
     report_d()
     report_e()
     # NOTE: run_optimize_control's spec-declared defaults (n_instances=500, steps=5000)
-    # take ~10 hours at current performance -- the shadow arm's per-step Octonion
-    # object construction in propose_shadow dominates (~7s/instance at steps=5000,
-    # measured empirically). Reduced here so the report finishes in a few minutes;
-    # call report_f(n_instances=500, steps=5000) directly for the full-power run.
+    # take ~5.5 hours at current performance -- reduced here so the report finishes in
+    # a few minutes; call report_f(n_instances=500, steps=5000) directly for the
+    # full-power run.
     report_f(n_instances=20, steps=500)
+    report_g()
     print("=" * 64)
