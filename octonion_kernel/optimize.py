@@ -36,17 +36,42 @@ def propose_random(state: np.ndarray, J: np.ndarray, rng: np.random.Generator) -
     return int(rng.integers(0, len(state)))
 
 
+def _sample_by_score(scores: np.ndarray, rng: np.random.Generator) -> int:
+    """Sample an index with probability proportional to its (non-negative) score.
+    Hard argmax deadlocks single-spin-flip SA: once the top-scoring spin's flip is
+    thermally rejected, the state hasn't changed, so the same spin is proposed again
+    next step -- deterministically, forever, at whatever temperature remains. Score-
+    weighted sampling keeps the heuristic's priority while preserving exploration
+    diversity, using the `rng` every proposal function already takes."""
+    total = scores.sum()
+    if total <= 0.0:
+        return int(rng.integers(0, len(scores)))
+    return int(rng.choice(len(scores), p=scores / total))
+
+
+def _flip_improvement_scores(state: np.ndarray, h: np.ndarray) -> np.ndarray:
+    """max(0, -dE_i) for each spin i: how much flipping spin i would improve (lower)
+    the energy, zero if flipping would make it worse. dE_i = 2*state_i*h_i. Using
+    raw |h_i| instead conflates a spin that's already correctly settled with one
+    that's genuinely frustrated -- |h_i| doesn't encode which side of alignment the
+    spin is currently on, only how strongly it feels about it either way."""
+    return np.maximum(0.0, -2.0 * state * h)
+
+
 def propose_greedy(state: np.ndarray, J: np.ndarray, rng: np.random.Generator) -> int:
-    """The 'trivial' baseline: argmax|h_i| directly, no chunking, no octonion structure."""
+    """The 'trivial' baseline: sample by flip-improvement magnitude directly, no
+    chunking, no octonion structure."""
     h = local_fields(state, J)
-    return int(np.argmax(np.abs(h)))
+    return _sample_by_score(_flip_improvement_scores(state, h), rng)
 
 
 def propose_generic_nonlinear(state: np.ndarray, J: np.ndarray, rng: np.random.Generator) -> int:
-    """Fixed, pre-declared elementwise combination score_i = |state_i * h_i|. Same
-    per-chunk 16-numbers-per-chunk input as propose_shadow, no octonion algebra."""
+    """Fixed, pre-declared elementwise combination (the same flip-improvement
+    formula as propose_greedy -- it's already local per-spin, so chunking doesn't
+    change an elementwise computation). Same per-chunk 16-numbers-per-chunk input
+    as propose_shadow, no octonion algebra."""
     h = local_fields(state, J)
-    return int(np.argmax(np.abs(state * h)))
+    return _sample_by_score(_flip_improvement_scores(state, h), rng)
 
 
 def _shadow_chunk_scores(a_chunk: np.ndarray, b_chunk: np.ndarray) -> np.ndarray:
@@ -57,21 +82,17 @@ def _shadow_chunk_scores(a_chunk: np.ndarray, b_chunk: np.ndarray) -> np.ndarray
 
 def propose_shadow(state: np.ndarray, J: np.ndarray, rng: np.random.Generator) -> int:
     """Per chunk, score_i = |associator_i| from shadow_decompose(chunk spins, chunk
-    fields); propose the global argmax. Fixed, pre-declared rule -- no open search."""
+    fields); sample proportional to score across all n spins. Fixed, pre-declared
+    rule -- no open search."""
     n = len(state)
     h = local_fields(state, J)
     n_chunks = n // CHUNK_SIZE
-    best_score = -np.inf
-    best_idx = 0
+    scores = np.empty(n)
     for c in range(n_chunks):
         start = c * CHUNK_SIZE
         end = start + CHUNK_SIZE
-        scores = _shadow_chunk_scores(state[start:end], h[start:end])
-        local_best = int(np.argmax(scores))
-        if scores[local_best] > best_score:
-            best_score = scores[local_best]
-            best_idx = start + local_best
-    return best_idx
+        scores[start:end] = _shadow_chunk_scores(state[start:end], h[start:end])
+    return _sample_by_score(scores, rng)
 
 
 def anneal(J: np.ndarray, initial_state: np.ndarray, propose_fn, steps: int = 5000,

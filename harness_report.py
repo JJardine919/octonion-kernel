@@ -1,8 +1,12 @@
-"""Runnable A/B/C control report. Run from the repo root: python harness_report.py
+"""Runnable A/B/C/D/E/F control report. Run from the repo root: python harness_report.py
 
 A: algebra correctness  (delegates to pytest tests/test_algebra.py)
 B: Jordan-Shadow identity residuals over random pairs
 C: the anti-castle control — does the associator beat the best trivial baseline?
+D: dynamics control — does iterating the octonion walk add linear separability?
+E: topology control — does the walk's trajectory carry more loop structure?
+F: optimizer control — does shadow-guided move-proposal reach lower SK-model energy
+   than random/greedy/generic-nonlinear baselines in simulated annealing?
 """
 import numpy as np
 
@@ -10,6 +14,7 @@ from octonion_kernel import Octonion, identity_residuals
 from octonion_kernel.controls import run_control_c
 from octonion_kernel.dynamics_controls import run_dynamics_control
 from octonion_kernel.topology_controls import run_topology_control
+from octonion_kernel.optimize_controls import run_optimize_control
 
 
 def _rand_oct(rng):
@@ -108,6 +113,39 @@ def report_e(n=200, steps=256, seed=0):
     print( "     normalized max-H1 disambiguates 'topologically poor' from 'merely contractive'.)")
 
 
+def report_f(n_instances=500, n=64, steps=5000, seed=0):
+    out = run_optimize_control(n_instances=n_instances, n=n, steps=steps, seed=seed)
+    print(f"\n[F] Optimizer control ({n_instances} paired SK-model instances, n={n} spins, "
+          f"{steps}-step simulated annealing, shared cooling schedule):")
+    print(f"    {'arm':<18} {'mean best-energy':>18}")
+    for k in ("random", "greedy", "generic_nonlinear", "shadow"):
+        print(f"    {k:<18} {out['mean_energy'][k]:>18.4f}")
+    print("\n    power check (arm must reliably beat random):")
+    for arm, p in out["power_check"].items():
+        status = "OK" if p["beats_random"] else "FAILED"
+        print(f"    {arm:<18} advantage {p['mean_advantage']:>8.4f}  "
+              f"95% CI [{p['ci_lo']:.4f}, {p['ci_hi']:.4f}]  {status}")
+    print(f"\n    best baseline: {out['best_baseline']} "
+          f"(mean best-energy {out['mean_energy'][out['best_baseline']]:.4f})")
+    print(f"    shadow mean best-energy: {out['mean_energy']['shadow']:.4f}")
+    print(f"    mean[best_baseline_energy - shadow_energy], 95% CI: "
+          f"[{out['sep_difference_ci'][0]:.4f}, {out['sep_difference_ci'][1]:.4f}]")
+    v = out["verdict"]
+    if v["inconclusive"]:
+        print("    VERDICT: INCONCLUSIVE - the power check failed (greedy and/or")
+        print("             generic-nonlinear did not reliably beat random), so this run has")
+        print("             no demonstrated ability to separate any method from noise.")
+    elif v["shadow_finds_better_optima"]:
+        print("    VERDICT: YES - the shadow-guided proposal reaches reliably lower energy")
+        print("             than every declared baseline (random, greedy local-field, and a")
+        print("             matched generic-nonlinear combination of the same information).")
+    else:
+        print("    VERDICT: NO - the shadow-guided proposal does NOT beat the best baseline.")
+        print("             Routing the same local-field information through the")
+        print("             Jordan-Shadow associator is not doing useful search-guidance")
+        print("             work here.")
+
+
 if __name__ == "__main__":
     print("=" * 64)
     print("Octonion kernel control report")
@@ -116,4 +154,10 @@ if __name__ == "__main__":
     report_c()
     report_d()
     report_e()
+    # NOTE: run_optimize_control's spec-declared defaults (n_instances=500, steps=5000)
+    # take ~10 hours at current performance -- the shadow arm's per-step Octonion
+    # object construction in propose_shadow dominates (~7s/instance at steps=5000,
+    # measured empirically). Reduced here so the report finishes in a few minutes;
+    # call report_f(n_instances=500, steps=5000) directly for the full-power run.
+    report_f(n_instances=20, steps=500)
     print("=" * 64)

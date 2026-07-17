@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from octonion_kernel.optimize import (
-    make_sk_instance, energy, local_fields, anneal,
+    make_sk_instance, energy, local_fields, anneal, _sample_by_score,
     propose_random, propose_greedy, propose_generic_nonlinear, propose_shadow,
 )
 
@@ -70,36 +70,58 @@ def test_propose_returns_valid_index(propose_fn):
         assert 0 <= i < 64
 
 
-def test_greedy_picks_largest_absolute_field():
-    rng = np.random.default_rng(6)
-    J = make_sk_instance(n=32, seed=6)
-    state = rng.choice([-1.0, 1.0], size=32)
+def test_sample_by_score_strongly_favors_dominant_entry():
+    rng = np.random.default_rng(30)
+    scores = np.array([1.0, 1.0, 1.0, 100.0, 1.0, 1.0, 1.0, 1.0])
+    counts = np.zeros(8, dtype=int)
+    for _ in range(500):
+        counts[_sample_by_score(scores, rng)] += 1
+    assert int(np.argmax(counts)) == 3
+    assert counts[3] > 400
+
+
+def test_sample_by_score_all_zero_scores_returns_valid_index():
+    rng = np.random.default_rng(31)
+    for _ in range(20):
+        i = _sample_by_score(np.zeros(5), rng)
+        assert 0 <= i < 5
+
+
+def test_greedy_uses_flip_improvement_as_score():
+    # Same-seed comparison against the shared sampling primitive directly --
+    # deterministic (no statistical dominance needed), and verifies propose_greedy
+    # computes exactly max(0, -dE_i) as its score rather than some other formula.
+    J = make_sk_instance(n=16, seed=6)
+    state = np.random.default_rng(60).choice([-1.0, 1.0], size=16)
     h = local_fields(state, J)
-    i = propose_greedy(state, J, rng)
-    assert i == int(np.argmax(np.abs(h)))
+    expected_scores = np.maximum(0.0, -2.0 * state * h)
+    expected = _sample_by_score(expected_scores, np.random.default_rng(99))
+    actual = propose_greedy(state, J, np.random.default_rng(99))
+    assert actual == expected
 
 
-def test_generic_nonlinear_picks_largest_state_times_field():
-    rng = np.random.default_rng(7)
-    J = make_sk_instance(n=32, seed=7)
-    state = rng.choice([-1.0, 1.0], size=32)
+def test_generic_nonlinear_uses_flip_improvement_as_score():
+    J = make_sk_instance(n=16, seed=7)
+    state = np.random.default_rng(70).choice([-1.0, 1.0], size=16)
     h = local_fields(state, J)
-    i = propose_generic_nonlinear(state, J, rng)
-    assert i == int(np.argmax(np.abs(state * h)))
+    expected_scores = np.maximum(0.0, -2.0 * state * h)
+    expected = _sample_by_score(expected_scores, np.random.default_rng(101))
+    actual = propose_generic_nonlinear(state, J, np.random.default_rng(101))
+    assert actual == expected
 
 
-def test_propose_shadow_selects_within_dominant_chunk():
+def test_propose_shadow_favors_dominant_chunk():
     # Block-diagonal J: each 8-spin chunk's local field depends only on its own
     # spins, so scaling one chunk's coupling strength way up gives it a much
-    # larger-magnitude associator and must make propose_shadow pick inside it.
+    # larger-magnitude associator and must make propose_shadow strongly favor it.
     n = 16
     rng = np.random.default_rng(20)
     J = np.zeros((n, n))
     J[0:8, 0:8] = make_sk_instance(n=8, seed=100)
     J[8:16, 8:16] = make_sk_instance(n=8, seed=101) * 50.0
     state = rng.choice([-1.0, 1.0], size=n)
-    i = propose_shadow(state, J, rng)
-    assert 8 <= i < 16
+    in_dominant_chunk = sum(1 for _ in range(200) if 8 <= propose_shadow(state, J, rng) < 16)
+    assert in_dominant_chunk > 150
 
 
 def test_anneal_deterministic():
