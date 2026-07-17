@@ -1,7 +1,12 @@
 import numpy as np
 import pytest
 
-from octonion_kernel.optimize import make_sk_instance, energy, local_fields
+from octonion_kernel.optimize import (
+    make_sk_instance, energy, local_fields,
+    propose_random, propose_greedy, propose_generic_nonlinear, propose_shadow,
+)
+
+_ALL_PROPOSE_FNS = [propose_random, propose_greedy, propose_generic_nonlinear, propose_shadow]
 
 
 def _naive_energy(state, J):
@@ -52,3 +57,46 @@ def test_local_field_matches_energy_delta():
         expected_delta = energy(flipped, J) - energy(state, J)
         actual_delta = 2.0 * state[i] * h[i]
         assert actual_delta == pytest.approx(expected_delta, abs=1e-9)
+
+
+@pytest.mark.parametrize("propose_fn", _ALL_PROPOSE_FNS)
+def test_propose_returns_valid_index(propose_fn):
+    rng = np.random.default_rng(5)
+    J = make_sk_instance(n=64, seed=5)
+    state = rng.choice([-1.0, 1.0], size=64)
+    for _ in range(10):
+        i = propose_fn(state, J, rng)
+        assert isinstance(i, int)
+        assert 0 <= i < 64
+
+
+def test_greedy_picks_largest_absolute_field():
+    rng = np.random.default_rng(6)
+    J = make_sk_instance(n=32, seed=6)
+    state = rng.choice([-1.0, 1.0], size=32)
+    h = local_fields(state, J)
+    i = propose_greedy(state, J, rng)
+    assert i == int(np.argmax(np.abs(h)))
+
+
+def test_generic_nonlinear_picks_largest_state_times_field():
+    rng = np.random.default_rng(7)
+    J = make_sk_instance(n=32, seed=7)
+    state = rng.choice([-1.0, 1.0], size=32)
+    h = local_fields(state, J)
+    i = propose_generic_nonlinear(state, J, rng)
+    assert i == int(np.argmax(np.abs(state * h)))
+
+
+def test_propose_shadow_selects_within_dominant_chunk():
+    # Block-diagonal J: each 8-spin chunk's local field depends only on its own
+    # spins, so scaling one chunk's coupling strength way up gives it a much
+    # larger-magnitude associator and must make propose_shadow pick inside it.
+    n = 16
+    rng = np.random.default_rng(20)
+    J = np.zeros((n, n))
+    J[0:8, 0:8] = make_sk_instance(n=8, seed=100)
+    J[8:16, 8:16] = make_sk_instance(n=8, seed=101) * 50.0
+    state = rng.choice([-1.0, 1.0], size=n)
+    i = propose_shadow(state, J, rng)
+    assert 8 <= i < 16
