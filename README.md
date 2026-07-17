@@ -74,3 +74,34 @@ vs linear 2.0000, random-walk 1.9657), so part of the raw gap could reflect cont
 than topological poverty. The scale-invariant normalized metric (max-H1/diameter) confirms the NO
 is unconfounded: octonion 0.2394 remains below the random-walk null (0.2715) and far below linear
 (0.7558). The NO is a valid, expected outcome by design.
+
+## Phase 4 — optimizer
+
+Phases 1-3 tested whether the Jordan-Shadow decomposition passively *carries information*.
+Phase 4 asks a different question: does it work as a *useful search-guidance signal* inside a
+real optimizer? `octonion_kernel/optimize.py` implements simulated annealing over a random
+SK-model instance (`E(s) = -Σ J_ij s_i s_j`, the standard QUBO-equivalent spin-glass testbed) with
+four interchangeable move-proposal strategies sharing one solver loop — random, greedy
+local-field, a generic-nonlinear elementwise combination, and shadow-guided (per-chunk
+`shadow_decompose` associator magnitude). The control (`optimize_controls.py`, `[F]` section of
+`harness_report.py`) runs all four paired on identical instances and asks whether shadow reaches
+reliably lower energy than the best of the other three, gated on a power check (greedy and
+generic-nonlinear must each reliably beat random, or the run is reported inconclusive rather than
+trusted as a NO).
+
+**Two bugs found and fixed during Phase-4 development, by the power check doing its job:** (1)
+hard-argmax move proposal deadlocks single-spin-flip SA — once the top-scoring spin's flip is
+thermally rejected, the state hasn't changed, so the identical spin gets proposed again next step,
+forever; fixed via score-weighted random sampling. (2) greedy/generic-nonlinear originally scored
+by raw `|h_i|` (accidentally identical to `|state_i·h_i|`, since `|state_i|=1` always), which
+conflates an already-settled spin with a genuinely frustrated one; fixed to score by actual
+flip-improvement `max(0, -ΔE_i)`, the textbook greedy criterion. Both fixes were driven by the
+baselines failing to beat random — exactly the "check the control has power before trusting a
+verdict" discipline Phase 2 established.
+
+**Phase-4 result:** NO — the shadow-guided proposal does not beat the best baseline (greedy local
+field). Power check passes cleanly (greedy/generic-nonlinear reliably beat random). Engine 0-for-4
+across all phases. Note: the spec-declared full-scale default (500 instances × 5000 steps) takes
+roughly 10 hours at current performance — `propose_shadow`'s per-step `Octonion` construction
+dominates the cost — so `harness_report.py`'s `[F]` section runs at a reduced demonstration scale
+by default; invoke `report_f(n_instances=500, steps=5000)` directly for the full-power run.
